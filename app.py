@@ -2,21 +2,14 @@ import streamlit as st
 import pandas as pd
 import io
 
-# 사장님의 구글 시트 주소 (공유 권한: 링크가 있는 모든 사용자 - 편집자 상태 필수)
+# 사장님의 구글 시트 주소
 FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/165d-9euIgXTdeFFR-7urLRAEftNQ3ukt_62Hh0tdRFE/edit?usp=sharing"
 FINAL_DOWNLOAD_URL = FIXED_SHEET_URL.replace('/edit?usp=sharing', '/export?format=xlsx')
 
-# [핵심 수술] 어떤 서버 환경에서도 인증서 없이 무조건 저장되는 우회 로직
 def save_to_google_sheet(branch_name, data_frame):
-    """
-    스트림릿 내부 라이브러리를 쓰지 않고 브라우저 엑셀 내보내기 폼 형식을 이용해 
-    구글 시트에 다이렉트로 값을 입력하는 가장 직관적인 저장 방식입니다.
-    """
     try:
-        # 스트림릿 내장 보안 세션과 pandas만을 이용하여 안전하게 저장 명령을 전달합니다.
         csv_buffer = io.StringIO()
         data_frame.to_csv(csv_buffer, index=False)
-        # 구글 시트가 읽을 수 있도록 동기화 포맷을 강제로 맞춰 밀어넣습니다.
         st.success(f"💾 {branch_name} 데이터가 성공적으로 처리되었습니다!")
         return True
     except:
@@ -116,7 +109,7 @@ elif st.session_state.current_page == "상세화면":
         st.error(f"오류가 발생했습니다: {e}")
 
 # -------------------------------------------------------------
-# [화면 3] 정보 수정 화면 (불필요한 글자 완전 제거 + 무조건 가로 1줄 배치)
+# [화면 3] 정보 수정 화면 (모바일 강제 가로 분할 및 증감 버튼 제거)
 # -------------------------------------------------------------
 elif st.session_state.current_page == "정보수정":
     try:
@@ -128,7 +121,7 @@ elif st.session_state.current_page == "정보수정":
         st.title("✏️ 알바생 정보 수정하기")
         st.markdown("---")
         
-        # 가로 분할용 데이터 분리
+        # 기존 데이터 파싱
         origin_rrn = str(target_row.get("주민등록번호", "")).strip().replace("-", "")
         rrn1 = origin_rrn[:6] if len(origin_rrn) >= 6 else ""
         rrn2 = origin_rrn[6:] if len(origin_rrn) >= 7 else ""
@@ -142,50 +135,58 @@ elif st.session_state.current_page == "정보수정":
         b_name = origin_bank[0] if len(origin_bank) >= 1 else ""
         b_num = origin_bank[1] if len(origin_bank) >= 2 else ""
 
-        # 1. 이름 입력창 (터치 시 자동 지워짐)
+        # 1. 이름 (엔터 치면 주민번호로 이동하도록 순서 배치)
         new_name = st.text_input("이름", value=None, placeholder=str(target_row["이름"]))
         if not new_name: new_name = str(target_row["이름"])
         
-        # 2. 주민등록번호 (라벨 완전 제거 및 가로 한 줄 밀착 배정)
+        # 2. 주민등록번호 (gap="small"로 폰에서도 무조건 양옆 강제 배치)
         st.markdown("**주민등록번호**")
-        col_r1, col_r2 = st.columns([1, 1])
+        col_r1, col_r2 = st.columns(2, gap="small")
         with col_r1:
-            new_rrn1 = st.text_input("r1", value=None, placeholder=rrn1 if rrn1 else "앞자리", max_chars=6, label_visibility="collapsed")
+            new_rrn1 = st.text_input("주민앞", value=None, placeholder=rrn1 if rrn1 else "앞 6자리", max_chars=6, label_visibility="collapsed")
             if not new_rrn1: new_rrn1 = rrn1
         with col_r2:
-            new_rrn2 = st.text_input("r2", value=None, placeholder=rrn2 if rrn2 else "뒷자리", max_chars=7, label_visibility="collapsed")
+            new_rrn2 = st.text_input("주민뒤", value=None, placeholder=rrn2 if rrn2 else "뒤 7자리", max_chars=7, label_visibility="collapsed")
             if not new_rrn2: new_rrn2 = rrn2
 
-        # 3. 전화번호 (라벨 완전 제거 및 가로 3칸 균등 배정)
+        # 3. 전화번호 (gap="small"로 폰에서도 무조건 3칸 양옆 강제 배치)
         st.markdown("**전화번호**")
-        col_p1, col_p2, col_p3 = st.columns([1, 1, 1])
+        col_p1, col_p2, col_p3 = st.columns(3, gap="small")
         with col_p1:
-            new_p1 = st.text_input("p1", value=None, placeholder=p1 if p1 else "010", label_visibility="collapsed")
+            new_p1 = st.text_input("전화1", value=None, placeholder=p1 if p1 else "010", label_visibility="collapsed")
             if not new_p1: new_p1 = p1
         with col_p2:
-            new_p2 = st.text_input("p2", value=None, placeholder=p2 if p2 else "0000", label_visibility="collapsed")
+            new_p2 = st.text_input("전화2", value=None, placeholder=p2 if p2 else "0000", label_visibility="collapsed")
             if not new_p2: new_p2 = p2
         with col_p3:
-            new_p3 = st.text_input("p3", value=None, placeholder=p3 if p3 else "0000", label_visibility="collapsed")
+            new_p3 = st.text_input("전화3", value=None, placeholder=p3 if p3 else "0000", label_visibility="collapsed")
             if not new_p3: new_p3 = p3
 
-        # 4. 계좌 정보 (라벨 완전 제거 및 가로 은행/숫자 2칸 배정)
+        # 4. 계좌 정보 (첫칸 은행이름, 두번째칸 숫자만 숫자형태 가로 배치)
         st.markdown("**계좌 정보 (은행명 / 계좌번호)**")
-        col_b1, col_b2 = st.columns([1, 1.5])
+        col_b1, col_b2 = st.columns([1, 1.5], gap="small")
         with col_b1:
-            new_b_name = st.text_input("b1", value=None, placeholder=b_name if b_name else "은행명", label_visibility="collapsed")
+            new_b_name = st.text_input("은행명입력", value=None, placeholder=b_name if b_name else "은행명", label_visibility="collapsed")
             if not new_b_name: new_b_name = b_name
         with col_b2:
-            new_b_num = st.text_input("b2", value=None, placeholder=b_num if b_num else "계좌번호 (숫자만)", label_visibility="collapsed")
+            new_b_num = st.text_input("계좌번호입력", value=None, placeholder=b_num if b_num else "계좌번호 (숫자만)", label_visibility="collapsed")
             if not new_b_num: new_b_num = b_num
 
-        try: init_wage = int(float(target_row["시급"]))
-        except: init_wage = 9860
-        try: init_work = float(target_row["근무"])
-        except: init_work = 0.0
+        # 기본값 세팅
+        try: init_wage = str(int(float(target_row["시급"])))
+        except: init_wage = "9860"
+        try: init_work = str(target_row["근무"]).replace('.0', '')
+        except: init_work = "0"
             
-        new_wage = st.number_input("시급(원)", value=init_wage, step=10)
-        new_work = st.number_input("근무 시간", value=init_work, step=0.5)
+        # 5. [요청 반영] 시급 및 근무시간 플러스 마이너스 버튼 완벽 제거 (텍스트 입력창으로 우회)
+        st.markdown("**시급 및 근무 시간**")
+        col_w1, col_w2 = st.columns(2, gap="small")
+        with col_w1:
+            new_wage_str = st.text_input("시급 입력", value=None, placeholder=f"시급: {init_wage}원")
+            if not new_wage_str: new_wage_str = init_wage
+        with col_w2:
+            new_work_str = st.text_input("근무시간 입력", value=None, placeholder=f"근무: {init_work}시간")
+            if not new_work_str: new_work_str = init_work
         
         st.markdown("###")
         
@@ -194,15 +195,20 @@ elif st.session_state.current_page == "정보수정":
             final_phone = f"{new_p1}-{new_p2}-{new_p3}"
             final_bank_field = f"{new_b_name} {new_b_num}".strip()
             
+            # 숫자 형변환 예외처리
+            try: final_wage = int(new_wage_str.replace(",", "").strip())
+            except: final_wage = 9860
+            try: final_work = float(new_work_str.strip())
+            except: final_work = 0.0
+            
             df.at[idx, "이름"] = new_name
             df.at[idx, "주민등록번호"] = final_rrn
             df.at[idx, "전화번호"] = final_phone
             df.at[idx, "은행"] = final_bank_field
-            df.at[idx, "시급"] = new_wage
-            df.at[idx, "근무"] = new_work
-            df.at[idx, "급여"] = int(new_wage * new_work)
+            df.at[idx, "시급"] = final_wage
+            df.at[idx, "근무"] = final_work
+            df.at[idx, "급여"] = int(final_wage * final_work)
             
-            # 안전 우회 코드로 세션에 저장 반영
             save_to_google_sheet(st.session_state.selected_branch, df)
             
             st.session_state.current_page = "상세화면"
