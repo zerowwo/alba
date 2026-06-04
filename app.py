@@ -1,25 +1,46 @@
 import streamlit as st
 import pandas as pd
 import io
+import gspread
+from google.oauth2.service_account import Credentials
 
 # 사장님의 구글 시트 주소 (공유 권한: 링크가 있는 모든 사용자 - 편집자 상태 필수)
 FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/165d-9euIgXTdeFFR-7urLRAEftNQ3ukt_62Hh0tdRFE/edit?usp=sharing"
 FINAL_DOWNLOAD_URL = FIXED_SHEET_URL.replace('/edit?usp=sharing', '/export?format=xlsx')
 
 # [핵심 수술] 어떤 서버 환경에서도 인증서 없이 무조건 저장되는 우회 로직
-def save_to_google_sheet(branch_name, data_frame):
-    """
-    스트림릿 내부 라이브러리를 쓰지 않고 브라우저 엑셀 내보내기 폼 형식을 이용해 
-    구글 시트에 다이렉트로 값을 입력하는 가장 직관적인 저장 방식입니다.
-    """
+def save_to_google_sheet(sheet_name, df):
     try:
-        # 스트림릿 내장 보안 세션과 pandas만을 이용하여 안전하게 저장 명령을 전달합니다.
-        csv_buffer = io.StringIO()
-        data_frame.to_csv(csv_buffer, index=False)
-        # 구글 시트가 읽을 수 있도록 동기화 포맷을 강제로 맞춰 밀어넣습니다.
-        st.success(f"💾 {branch_name} 데이터가 성공적으로 처리되었습니다!")
+        scope = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=scope
+        )
+
+        client = gspread.authorize(creds)
+
+        spreadsheet = client.open_by_key(
+            "165d-9euIgXTdeFFR-7urLRAEftNQ3ukt_62Hh0tdRFE"
+        )
+
+        worksheet = spreadsheet.worksheet(sheet_name)
+
+        worksheet.clear()
+
+        worksheet.update(
+            [df.columns.tolist()] +
+            df.values.tolist()
+        )
+
+        st.success("저장 완료!")
         return True
-    except:
+
+    except Exception as e:
+        st.error(f"저장 실패: {e}")
         return False
 
 st.set_page_config(page_title="알바 급여 관리자", layout="wide")
